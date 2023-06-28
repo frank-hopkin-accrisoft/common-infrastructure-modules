@@ -55,6 +55,9 @@ resource "aws_instance" "vpn_server" {
   }
 
   user_data = file("${path.module}/scripts/setup_vpn.sh")
+  tags = {
+    Name = "TeamfrontVPN"
+  }
 }
 
 # Add A record for vpn.comanydomain.com
