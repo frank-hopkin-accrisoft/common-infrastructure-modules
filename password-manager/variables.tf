@@ -19,14 +19,14 @@ variable "vpc_id" {
   type = string
 }
 
-variable "security_groups" {
+variable "server_security_groups" {
   default = ""
 }
 
-variable "subnets" {
+variable "server_subnets" {
   default = ""
 }
 
-variable "comany_domain" {
+variable "company_domain" {
   type = string
 }

@@ -19,6 +19,7 @@ data "aws_route53_zone" "vpn_hosted_zone" {
   name = var.company_domain
 }
 
+
 # Generates a secure private key and encodes it as PEM
 resource "tls_private_key" "key_pair" {
   algorithm = "RSA"
@@ -50,12 +51,13 @@ resource "aws_instance" "vpn_server" {
   subnet_id              = var.vpn_server_subnets
 
   root_block_device {
-    volume_size = 30
-    encrypted = true
+    volume_size           = 30
+    delete_on_termination = false
+    encrypted             = true
   }
 
   user_data = file("${path.module}/scripts/setup_vpn.sh")
-  tags = {
+  tags      = {
     Name = "TeamfrontVPN"
   }
 }
