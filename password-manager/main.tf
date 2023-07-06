@@ -61,7 +61,7 @@ resource "aws_instance" "vaultwarden_server" {
     delete_on_termination = false
   }
 
-  user_data = file("${path.module}/scripts/setup_bitwarden.sh")
+  user_data = file("${path.module}/scripts/setup_vaultwarden.sh")
   tags      = {
     Name = "Vaultwarden Server"
   }
@@ -86,7 +86,7 @@ resource "aws_lb" "alb" {
 
 resource "aws_alb_target_group" "alb_tg" {
   depends_on  = [aws_lb.alb]
-  name        = "bitwarden-tg"
+  name        = "vaultwarden-tg"
   vpc_id      = var.vpc_id
   protocol    = "HTTP"
   target_type = "instance"
@@ -152,7 +152,7 @@ resource "aws_lb_listener" "alb_listener_https" {
   tags = var.tags
 }
 
-resource "aws_alb_target_group_attachment" "tg_to_bitwarden_server" {
+resource "aws_alb_target_group_attachment" "tg_to_vaultwarden_server" {
   target_group_arn = aws_alb_target_group.alb_tg.arn
   target_id        = aws_instance.vaultwarden_server.id
 }
