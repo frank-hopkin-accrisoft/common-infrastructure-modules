@@ -73,12 +73,13 @@ resource "aws_instance" "vaultwarden_server" {
   }
 }
 
+#Create load balancer
 resource "aws_lb" "alb" {
   depends_on                       = [aws_instance.vaultwarden_server]
   name                             = "vaultwarden-lb"
   internal                         = false
   load_balancer_type               = "application"
-  enable_deletion_protection       = false #TODO set to true
+  enable_deletion_protection       = true
   subnets                          = var.lb_subnets
   security_groups                  = var.lb_security_groups
   enable_cross_zone_load_balancing = true
@@ -90,6 +91,8 @@ resource "aws_lb" "alb" {
   tags = var.tags
 }
 
+
+#Create load balancer target group
 resource "aws_alb_target_group" "alb_tg" {
   depends_on  = [aws_lb.alb]
   name        = "vaultwarden-tg"
@@ -113,6 +116,7 @@ resource "aws_alb_target_group" "alb_tg" {
   tags = var.tags
 }
 
+#Create HTTP listener that auto redirects to HTTPS
 resource "aws_lb_listener" "alb_listener_http" {
   depends_on = [
     aws_lb.alb,
@@ -138,6 +142,7 @@ resource "aws_lb_listener" "alb_listener_http" {
   tags = var.tags
 }
 
+#Create HTTPS listener
 resource "aws_lb_listener" "alb_listener_https" {
   depends_on = [
     aws_lb.alb,
@@ -158,11 +163,13 @@ resource "aws_lb_listener" "alb_listener_https" {
   tags = var.tags
 }
 
+#Attach target group to ec2 instance
 resource "aws_alb_target_group_attachment" "tg_to_vaultwarden_server" {
   target_group_arn = aws_alb_target_group.alb_tg.arn
   target_id        = aws_instance.vaultwarden_server.id
 }
 
+#Create CName record for LB DNS
 resource "aws_route53_record" "vaultwarden" {
   depends_on = [aws_instance.vaultwarden_server]
   zone_id    = data.aws_route53_zone.vpn_hosted_zone.zone_id
