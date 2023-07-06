@@ -12,7 +12,7 @@ module "vpn" {
   }
 }
 
-module "bitwarden" {
+module "vaultwarden" {
   source                 = "./password-manager"
   company_domain         = "tigrisconsulting.cloud"
   vpc_id                 = "vpc-1771dd6a"
