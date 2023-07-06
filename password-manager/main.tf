@@ -27,7 +27,7 @@ data "aws_route53_zone" "vpn_hosted_zone" {
 
 #lookup default ebs kms key
 data "aws_kms_key" "aws_managed_ebs_key" {
-  key_id = "aws/ebs"
+  key_id = "alias/aws/ebs"
 }
 
 # Generates a secure private key and encodes it as PEM

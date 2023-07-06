@@ -19,6 +19,11 @@ data "aws_route53_zone" "vpn_hosted_zone" {
   name = var.company_domain
 }
 
+#lookup default ebs kms key
+data "aws_kms_key" "aws_managed_ebs_key" {
+  key_id = "alias/aws/ebs"
+}
+
 # Generates a secure private key and encodes it as PEM
 resource "tls_private_key" "key_pair" {
   algorithm = "RSA"
@@ -50,8 +55,10 @@ resource "aws_instance" "vpn_server" {
   subnet_id              = var.vpn_server_subnets
 
   root_block_device {
-    volume_size = 30
-    encrypted   = true
+    volume_size           = 30
+    kms_key_id            = data.aws_kms_key.aws_managed_ebs_key.id
+    encrypted             = true
+    delete_on_termination = false
   }
 
   user_data = file("${path.module}/scripts/setup_vpn.sh")
