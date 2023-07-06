@@ -1,55 +1,78 @@
 data "aws_caller_identity" "current" {}
 
 data "aws_acm_certificate" "wildcard_cert" {
-  domain = "*.${var.comany_domain}"
+  domain = "*.${var.company_domain}"
 }
 
-resource "aws_ecr_repository" "bitwarden" {
-  name = "bitwarden-server"
+# lookup server AMI
+data "aws_ami" "ami" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
 }
 
-resource "aws_ecs_cluster" "bitwarden" {
-  name = "bitwarden"
+#lookup route53 hosted zone for domain
+data "aws_route53_zone" "vpn_hosted_zone" {
+  name = var.company_domain
 }
 
-resource "aws_ecs_service" "bitwarden" {
-  name          = "bitwarden"
-  cluster       = aws_ecs_cluster.bitwarden.name
-  desired_count = 1
-  launch_type   = "FARGATE"
+# Generates a secure private key and encodes it as PEM
+resource "tls_private_key" "key_pair" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
 
-  deployment_controller {
-    type = "ECS"
+# Create the Key Pair
+resource "aws_key_pair" "key_pair" {
+  key_name   = "vaultwarden_server_key_pair"
+  public_key = tls_private_key.key_pair.public_key_openssh
+}
+
+# Save file
+resource "local_file" "ssh_key" {
+  filename = "${aws_key_pair.key_pair.key_name}.pem"
+  content  = tls_private_key.key_pair.private_key_pem
+}
+
+# Created EC2
+resource "aws_instance" "vaultwarden_server" {
+  depends_on = [
+    aws_key_pair.key_pair
+  ]
+  ami           = data.aws_ami.ami.id
+  instance_type = "t2.medium"
+
+  key_name               = "vaultwarden_server_key_pair"
+  vpc_security_group_ids = var.server_security_groups
+  subnet_id              = var.server_subnets
+
+  root_block_device {
+    volume_size           = 30
+    encrypted             = true
+    delete_on_termination = false
   }
 
-  network_configuration {
-    subnets          = var.subnets
-    security_groups  = var.security_groups
-    assign_public_ip = false
+  user_data = file("${path.module}/scripts/setup_bitwarden.sh")
+  tags      = {
+    Name = "Vaultwarden Server"
   }
-
-  health_check_grace_period_seconds = 300
-
-  load_balancer {
-    target_group_arn = aws_alb_target_group.alb_tg.arn
-    container_name   = "bitwarden-server"
-    container_port   = "8080"
-  }
-
-  lifecycle {
-    ignore_changes = [desired_count]
-  }
-
-  task_definition = jsonencode({})
-
-  tags = var.tags
 }
 
 resource "aws_lb" "alb" {
-  name                             = "bitwarden_lb"
+  depends_on                       = [aws_instance.vaultwarden_server]
+  name                             = "vaultwarden-lb"
   internal                         = false
   load_balancer_type               = "application"
-  enable_deletion_protection       = true
+  enable_deletion_protection       = false #TODO set to true
   subnets                          = var.lb_subnets
   security_groups                  = var.lb_security_groups
   enable_cross_zone_load_balancing = true
@@ -66,12 +89,12 @@ resource "aws_alb_target_group" "alb_tg" {
   name        = "bitwarden-tg"
   vpc_id      = var.vpc_id
   protocol    = "HTTP"
-  target_type = "ip"
+  target_type = "instance"
   port        = var.port
 
-  #  health_check {
-  #    path = var.health_check_path
-  #  }
+  health_check {
+    path = "/"
+  }
   lifecycle {
     create_before_destroy = true
   }
@@ -127,4 +150,18 @@ resource "aws_lb_listener" "alb_listener_https" {
     create_before_destroy = true
   }
   tags = var.tags
+}
+
+resource "aws_alb_target_group_attachment" "tg_to_bitwarden_server" {
+  target_group_arn = aws_alb_target_group.alb_tg.arn
+  target_id        = aws_instance.vaultwarden_server.id
+}
+
+resource "aws_route53_record" "vaultwarden" {
+  depends_on = [aws_instance.vaultwarden_server]
+  zone_id    = data.aws_route53_zone.vpn_hosted_zone.zone_id
+  name       = "vault.${data.aws_route53_zone.vpn_hosted_zone.name}"
+  type       = "CNAME"
+  ttl        = "300"
+  records    = [aws_lb.alb.dns_name]
 }

@@ -51,11 +51,11 @@ resource "aws_instance" "vpn_server" {
 
   root_block_device {
     volume_size = 30
-    encrypted = true
+    encrypted   = true
   }
 
   user_data = file("${path.module}/scripts/setup_vpn.sh")
-  tags = {
+  tags      = {
     Name = "TeamfrontVPN"
   }
 }
