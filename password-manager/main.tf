@@ -71,6 +71,10 @@ resource "aws_instance" "vaultwarden_server" {
   tags      = {
     Name = "Vaultwarden Server"
   }
+
+  lifecycle {
+    ignore_changes = var.ignore_ami_change ? [] : [ami]
+  }
 }
 
 #Create load balancer

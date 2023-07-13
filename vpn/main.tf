@@ -60,6 +60,10 @@ resource "aws_instance" "vpn_server" {
   tags      = {
     Name = "TeamfrontVPN"
   }
+
+  lifecycle {
+    ignore_changes = var.ignore_ami_change ? [] : [ami]
+  }
 }
 
 # Add A record for vpn.comanydomain.com
