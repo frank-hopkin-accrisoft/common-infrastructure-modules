@@ -16,8 +16,3 @@ variable "company_domain" {
   type        = string
   description = "Company domain e.g. companyA.com"
 }
-
-variable "ignore_ami_change" {
-  type    = bool
-  default = false
-}
