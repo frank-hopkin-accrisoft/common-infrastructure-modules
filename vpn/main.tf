@@ -57,12 +57,13 @@ resource "aws_instance" "vpn_server" {
   }
 
   user_data = file("${path.module}/scripts/setup_vpn.sh")
-  tags      = {
-    Name = "TeamfrontVPN"
-  }
+  tags      = merge({
+    Name = "TeamfrontVPN",
+    snapshot = "True"
+  }, var.tags)
 
   lifecycle {
-    ignore_changes = var.ignore_ami_change ? [] : [ami]
+    ignore_changes = [ami]
   }
 }
 

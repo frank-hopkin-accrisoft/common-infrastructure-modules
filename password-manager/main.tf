@@ -63,17 +63,18 @@ resource "aws_instance" "vaultwarden_server" {
   root_block_device {
     volume_size           = 30
     encrypted             = true
-    kms_key_id            = data.aws_kms_key.aws_managed_ebs_key.id
+    kms_key_id            = data.aws_kms_key.aws_managed_ebs_key.arn
     delete_on_termination = false
   }
 
   user_data = file("${path.module}/scripts/setup_vaultwarden.sh")
-  tags      = {
-    Name = "Vaultwarden Server"
-  }
+  tags      = merge({
+    Name = "Vaultwarden Server",
+    snapshot = "True"
+  }, var.tags)
 
   lifecycle {
-    ignore_changes = var.ignore_ami_change ? [] : [ami]
+    ignore_changes = [ami]
   }
 }
 

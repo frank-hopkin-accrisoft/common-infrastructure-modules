@@ -30,8 +30,3 @@ variable "server_subnets" {
 variable "company_domain" {
   type = string
 }
-
-variable "ignore_ami_change" {
-  type    = bool
-  default = false
-}
