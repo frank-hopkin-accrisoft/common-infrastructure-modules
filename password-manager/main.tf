@@ -183,3 +183,88 @@ resource "aws_route53_record" "vaultwarden" {
   ttl        = "300"
   records    = [aws_lb.alb.dns_name]
 }
+
+# Vanta - Tests - Engineering - Load balancer unhealthy host count monitored (AWS)
+resource "aws_cloudwatch_metric_alarm" "UnHealthyHostCount" {
+  count = var.cloudwatch_metric_alarm_sns_topic_arn != "" ? 1 : 0
+
+  alarm_name          = "VaultWarden - UnHealthyHostCount"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  alarm_description   = "Unhealthy host count greater than 0"
+  actions_enabled     = true
+  alarm_actions = [
+    var.cloudwatch_metric_alarm_sns_topic_arn
+  ]
+  metric_name = "UnHealthyHostCount"
+  namespace   = "AWS/ApplicationELB"
+  statistic   = "Maximum"
+  dimensions = {
+    TargetGroup = aws_alb_target_group.alb_tg.id
+    LoadBalancer = aws_lb.alb.id
+  }
+  period              = 600
+  evaluation_periods  = 3
+  datapoints_to_alarm = 3
+  threshold           = 1
+  treat_missing_data  = "missing"
+
+  tags = {
+    customer = "ACN-1"
+  }
+}
+
+# Vanta - Tests - Engineering - Load balancer server errors monitored (AWS)
+resource "aws_cloudwatch_metric_alarm" "HTTPCode_ELB_5XX_Count" {
+  count = var.cloudwatch_metric_alarm_sns_topic_arn != "" ? 1 : 0
+
+  alarm_name          = "VaultWarden - HTTPCode_ELB_5XX_Count"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  alarm_description   = "ELB HTTP Code 500 count greater than 0"
+  actions_enabled     = true
+  alarm_actions = [
+    var.cloudwatch_metric_alarm_sns_topic_arn
+  ]
+  metric_name = "HTTPCode_ELB_5XX_Count"
+  namespace   = "AWS/ApplicationELB"
+  statistic   = "Maximum"
+  dimensions = {
+    LoadBalancer = aws_lb.alb.id
+  }
+  period              = 600
+  evaluation_periods  = 3
+  datapoints_to_alarm = 3
+  threshold           = 1
+  treat_missing_data  = "missing"
+
+  tags = {
+    customer = "ACN-1"
+  }
+}
+
+# Vanta - Tests - Engineering - Load balancer latency monitored
+resource "aws_cloudwatch_metric_alarm" "TargetResponseTime" {
+  count = var.cloudwatch_metric_alarm_sns_topic_arn != "" ? 1 : 0
+
+  alarm_name          = "VaultWarden - TargetResponseTime"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  alarm_description   = "TargetResponseTime greater than 60 seconds"
+  actions_enabled     = true
+  alarm_actions = [
+    var.cloudwatch_metric_alarm_sns_topic_arn
+  ]
+  metric_name = "TargetResponseTime"
+  namespace   = "AWS/ApplicationELB"
+  statistic   = "Maximum"
+  dimensions = {
+    LoadBalancer = aws_lb.alb.id
+  }
+  period              = 600
+  evaluation_periods  = 3
+  datapoints_to_alarm = 3
+  threshold           = 60
+  treat_missing_data  = "missing"
+
+  tags = {
+    customer = "ACN-1"
+  }
+}

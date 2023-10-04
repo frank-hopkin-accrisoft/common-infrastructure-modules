@@ -30,3 +30,8 @@ variable "server_subnets" {
 variable "company_domain" {
   type = string
 }
+
+variable "cloudwatch_metric_alarm_sns_topic_arn" {
+  default = ""
+  type = string
+}
